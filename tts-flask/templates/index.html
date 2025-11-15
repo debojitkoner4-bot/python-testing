@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Text to Speech (Auto Play)</title>
+    <style>
+        body { font-family: Arial; padding: 30px; background: #f7f7f7; }
+        .box {
+            background: white;
+            width: 450px;
+            padding: 25px;
+            margin: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #ccc;
+        }
+        textarea { width: 100%; padding: 10px; border-radius: 5px; }
+        button {
+            background: #2196F3; color: white;
+            padding: 10px 15px; border: none;
+            border-radius: 5px; cursor: pointer;
+        }
+        audio { width: 100%; margin-top: 15px; display: none; }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h2>🔊 Text To Speech (Listen Directly)</h2>
+
+    <textarea id="text" rows="5" placeholder="Write something..."></textarea><br><br>
+
+    <button onclick="convert()">Convert & Listen</button>
+
+    <audio id="player" controls></audio>
+</div>
+
+<script>
+function convert() {
+    let text = document.getElementById("text").value;
+
+    fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.audio_url) {
+            let player = document.getElementById("player");
+            player.style.display = "block";
+            player.src = data.audio_url;
+            player.play();   // auto play
+        }
+    });
+}
+</script>
+
+</body>
+</html>
