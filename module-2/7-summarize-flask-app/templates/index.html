@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Summarizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .button-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            flex: 1;
+        }
+        button:hover {
+            background: #218838;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        #clearBtn {
+            background: #dc3545;
+            flex: 0.5;
+        }
+        #clearBtn:hover {
+            background: #c82333;
+        }
+        .result-area {
+            margin-top: 20px;
+        }
+        .summary-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            color: #666;
+            text-align: center;
+            padding: 20px;
+        }
+        .word-count {
+            text-align: right;
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>AI Text Summarizer</h2>
+        <div class="subtitle">Paste your long text and get a concise summary</div>
+        
+        <textarea id="inputText" placeholder="Paste your long text here (minimum 30 words)..."></textarea>
+        <div class="word-count" id="wordCount">Words: 0</div>
+        
+        <div class="button-area">
+            <button onclick="summarizeText()" id="summarizeBtn">Summarize Text</button>
+            <button onclick="clearText()" id="clearBtn">Clear</button>
+        </div>
+        
+        <div class="result-area">
+            <h3>Summary:</h3>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const inputText = document.getElementById('inputText');
+        const wordCount = document.getElementById('wordCount');
+        const resultDiv = document.getElementById('result');
+        const summarizeBtn = document.getElementById('summarizeBtn');
+
+        // Update word count in real-time
+        inputText.addEventListener('input', function() {
+            const text = inputText.value.trim();
+            const words = text ? text.split(/\s+/).length : 0;
+            wordCount.textContent = `Words: ${words}`;
+            
+            // Enable/disable button based on word count
+            summarizeBtn.disabled = words < 30;
+        });
+
+        async function summarizeText() {
+            const text = inputText.value.trim();
+            
+            if (!text) {
+                showError('Please enter some text to summarize.');
+                return;
+            }
+
+            if (text.split(/\s+/).length < 30) {
+                showError('Please provide at least 30 words for summarization.');
+                return;
+            }
+
+            // Show loading
+            resultDiv.innerHTML = '<div class="loading">⏳ Summarizing text... This may take a few seconds.</div>';
+            
+            // Disable UI
+            inputText.disabled = true;
+            summarizeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showSummary(data);
+                } else {
+                    showError(data.error || 'An error occurred while summarizing.');
+                }
+
+            } catch (error) {
+                showError('Connection error: ' + error.message);
+            } finally {
+                inputText.disabled = false;
+                summarizeBtn.disabled = false;
+            }
+        }
+
+        function showSummary(data) {
+            resultDiv.innerHTML = `
+                <div class="stats">
+                    <span>Original: ${data.original_length} words</span>
+                    <span>Summary: ${data.summary_length} words</span>
+                    <span>Reduction: ${Math.round((1 - data.summary_length/data.original_length) * 100)}%</span>
+                </div>
+                <div class="summary-box">
+                    ${data.summary}
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            resultDiv.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function clearText() {
+            inputText.value = '';
+            resultDiv.innerHTML = '';
+            wordCount.textContent = 'Words: 0';
+            inputText.focus();
+        }
+
+        // Focus on textarea when page loads
+        inputText.focus();
+    </script>
+</body>
+</html>
